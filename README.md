@@ -1,18 +1,61 @@
 # DSPy Chain of Thought API
 
-A FastAPI service that implements a Chain of Thought reasoning program using DSPy.
+FastAPI service implementing Chain of Thought reasoning using DSPy and GPT-4-mini.
 
-## Overview
+## Setup
 
-This API provides an endpoint for processing questions through a DSPy Chain of Thought model, leveraging GPT-4-mini for natural language processing.
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-## Requirements
+2. Set OpenAI API key in `.env`:
+```
+OPENAI_API_KEY=your_key_here
+```
 
-- Python 3.8+
-- FastAPI
-- DSPy
-- OpenAI API key
+## Run
 
-## Installation
+Start server:
+```bash
+python run.py
+```
+Server runs at `http://localhost:8000`
 
-1. Clone the repository: 
+## API Endpoints
+
+### POST /chat
+Process messages with conversation history.
+for first conversation its important to run it emtpy without conversational id then it will generate conversational id after that put that conversational id and use it for conversation 
+Request:
+```json
+{
+    "conversation_id": "optional-id",
+    "message": "Your question"
+}
+```
+
+Response:
+```json
+{
+    "status": "success",
+    "conversation_id": "uuid",
+    "response": "AI response",
+    "history": [
+        {
+            "role": "user/assistant",
+            "content": "message",
+            "timestamp": "UTC time"
+        }
+    ]
+}
+```
+
+### GET /conversation/{conversation_id}
+Retrieve conversation history
+
+### DELETE /conversation/{conversation_id}
+Delete a conversation
+
+### GET /health
+Check API status
