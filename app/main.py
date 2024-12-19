@@ -1,25 +1,33 @@
+"""
+Main FastAPI application file that handles all HTTP endpoints and routing.
+Manages chat conversations and integrates with DSPy for processing messages.
+"""
+
 from fastapi import FastAPI, HTTPException
 from .models import ChatRequest
 from .storage import ConversationStorage
 from .dspy_config import DSPyManager
 import logging
 
-# Configure logging
+# Configure logging with timestamp, logger name, level and message
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
+# Initialize FastAPI app with metadata
 app = FastAPI(
     title="Conversational DSPy API",
     description="A conversational API using DSPy Chain of Thought",
     version="1.0.0"
 )
 
-# Initialize our storage and DSPy manager
+# Initialize core services
 try:
+    # Create storage instance for managing conversations
     storage = ConversationStorage()
+    # Create DSPy manager for handling AI processing
     dspy_manager = DSPyManager()
     logger.info("Successfully initialized storage and DSPy manager")
 except Exception as e:
@@ -34,12 +42,13 @@ async def root():
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """
-    Process a chat message and return the response
+    Process a chat message and return the response.
+    Handles conversation management and message processing through DSPy.
     """
     logger.info(f"Received chat request: {request}")
     
     try:
-        # Get or create conversation
+        # Check if conversation exists or create new one
         if request.conversation_id:
             conversation = storage.get_conversation(request.conversation_id)
             if not conversation:
@@ -50,10 +59,11 @@ async def chat(request: ChatRequest):
                 )
             logger.info(f"Retrieved existing conversation: {request.conversation_id}")
         else:
+            # Create new conversation if no ID provided
             conversation = storage.create_conversation()
             logger.info(f"Created new conversation: {conversation.id}")
         
-        # Add user message to conversation
+        # Store user's message in conversation history
         user_message = storage.add_message(
             conversation.id,
             "user",
@@ -61,7 +71,7 @@ async def chat(request: ChatRequest):
         )
         logger.info(f"Added user message to conversation: {user_message}")
         
-        # Process message with DSPy
+        # Process message using DSPy AI model
         logger.info("Processing message with DSPy...")
         response = await dspy_manager.process_message(
             conversation.messages,
@@ -69,7 +79,7 @@ async def chat(request: ChatRequest):
         )
         logger.info(f"Received DSPy response: {response}")
         
-        # Add assistant's response to conversation
+        # Store AI's response in conversation history
         assistant_message = storage.add_message(
             conversation.id,
             "assistant",
@@ -77,6 +87,7 @@ async def chat(request: ChatRequest):
         )
         logger.info(f"Added assistant response to conversation: {assistant_message}")
         
+        # Return complete response with conversation history
         return {
             "status": "success",
             "conversation_id": conversation.id,
@@ -92,7 +103,7 @@ async def chat(request: ChatRequest):
         }
         
     except HTTPException as e:
-        # Re-raise HTTP exceptions
+        # Re-raise HTTP exceptions for proper error handling
         raise
     except Exception as e:
         logger.error(f"Error processing chat request: {e}", exc_info=True)
